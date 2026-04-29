@@ -2,53 +2,24 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.1.7)</title>
+  <title>PhotoDates (v.1.8)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 40px;
     }
-
-    .month {
-      margin-bottom: 40px;
-    }
-
-    .month-name {
-      font-size: 22px;
-      margin-bottom: 10px;
-      font-weight: bold;
-    }
-
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 40px);
-      gap: 4px;
+    #results {
+      margin-top: 20px;
+      white-space: pre-line;
       font-family: monospace;
-      font-size: 14px;
-    }
-
-    .day {
-      text-align: center;
-      padding: 6px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-
-    .missing {
-      color: red;
-      font-weight: bold;
-    }
-
-    .empty {
-      border: none;
+      font-size: 15px;
     }
   </style>
 </head>
 <body>
 
-  <h2>PhotoDates (v.1.7)</h2>
+  <h2>PhotoDates (v.1.8)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -56,10 +27,12 @@
   <div id="results"></div>
 
   <script>
+    // Format DD/MM (no weekday)
+    function formatDayMonth(day, monthIndex) {
+      const dd = String(day).padStart(2, "0");
+      const mm = String(monthIndex + 1).padStart(2, "0");
+      return `${dd}/${mm}`;
+    }
+
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
-      const files = [...event.target.files];
-
-      // Track which days have photos (monthIndex → Set(days))
-      const daysWithPhotos = Array.from({ length: 12 }, () => new Set());
-
-      // EXIF fields to check (same as your working
+      const
