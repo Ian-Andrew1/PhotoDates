@@ -12,63 +12,15 @@
     #results {
       margin-top: 20px;
       white-space: pre-line;
+      font-family: monospace;
+      font-size: 15px;
     }
   </style>
 </head>
 <body>
 
-  <h2>PhotoDates (v.2)</h2>
+  <h2 id="title">PhotoDates (v.2)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
 
-  <div id="results"></div>
-
-  <script>
-    document.getElementById("folderPicker").addEventListener("change", async (event) => {
-      const files = [...event.target.files];
-      const photoDates = new Set();
-
-      for (const file of files) {
-        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
-
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const tags = ExifReader.load(arrayBuffer);
-
-          if (tags.DateTimeOriginal) {
-            const dateStr = tags.DateTimeOriginal.description.split(" ")[0];
-            const [year, month, day] = dateStr.split(":");
-            const date = new Date(`${year}-${month}-${day}`);
-            photoDates.add(date.toISOString().split("T")[0]);
-          }
-        } catch (err) {
-          console.log("Error reading EXIF:", err);
-        }
-      }
-
-      if (photoDates.size === 0) {
-        document.getElementById("results").textContent = "No EXIF dates found in this folder.";
-        return;
-      }
-
-      const sorted = [...photoDates].sort();
-      const start = new Date(sorted[0]);
-      const end = new Date(sorted[sorted.length - 1]);
-
-      const missing = [];
-      let current = new Date(start);
-
-      while (current <= end) {
-        const iso = current.toISOString().split("T")[0];
-        if (!photoDates.has(iso)) missing.push(iso);
-        current.setDate(current.getDate() + 1);
-      }
-
-      document.getElementById("results").textContent =
-        "Missing dates:\n" + (missing.length ? missing.join("\n") : "None — you have photos for every date!");
-    });
-  </script>
-
-</body>
-</html>
