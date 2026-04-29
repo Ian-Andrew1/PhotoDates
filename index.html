@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.2)</title>
+  <title>PhotoDates (v.3)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader/dist/exif-reader.min.js"></script>
   <style>
     body {
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-  <h2 id="title">PhotoDates (v.2)</h2>
+  <h2 id="title">PhotoDates (v.3)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -30,7 +30,9 @@
     function formatCalendarDate(iso) {
       const d = new Date(iso);
       const day = d.toLocaleDateString("en-GB", { weekday: "long" });
-      return `${iso} (${day})`;
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${mm}-${dd} (${day})`;
     }
 
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
@@ -44,7 +46,6 @@
           const arrayBuffer = await file.arrayBuffer();
           const tags = ExifReader.load(arrayBuffer);
 
-          // FIX: handle multiple possible EXIF date fields
           const tag =
             tags.DateTimeOriginal ||
             tags.DateCreated ||
@@ -74,9 +75,9 @@
 
       // Update title
       const firstDate = sorted[0];
-      document.title = `PhotoDates (v.2) — from ${firstDate}`;
+      document.title = `PhotoDates (v.3) — from ${firstDate}`;
       document.getElementById("title").textContent =
-        `PhotoDates (v.2) — from ${firstDate}`;
+        `PhotoDates (v.3) — from ${firstDate}`;
 
       // Build missing date list
       const missing = [];
@@ -88,16 +89,30 @@
         current.setDate(current.getDate() + 1);
       }
 
-      // Group by year → month
+      // Group by month only
       const grouped = {};
       missing.forEach(iso => {
         const d = new Date(iso);
-        const year = d.getFullYear();
         const month = d.toLocaleString("en-GB", { month: "long" });
 
-        if (!grouped[year]) grouped[year] = {};
-        if (!grouped[year][month]) grouped[year][month] = [];
-
-        grouped[year][month].push(formatCalendarDate(iso));
+        if (!grouped[month]) grouped[month] = [];
+        grouped[month].push(formatCalendarDate(iso));
       });
 
+      // Build output
+      let output = "Missing dates:\n\n";
+
+      Object.keys(grouped).forEach(month => {
+        output += `${month}\n`;
+        grouped[month].forEach(line => {
+          output += `  ${line}\n`;
+        });
+        output += "\n";
+      });
+
+      document.getElementById("results").textContent = output.trim();
+    });
+  </script>
+
+</body>
+</html>
