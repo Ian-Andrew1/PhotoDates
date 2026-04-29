@@ -86,4 +86,48 @@
           console.log("EXIF error:", err);
         }
 
-        // Fallback: file modified
+        // Fallback: file modified date
+        if (!foundDate) {
+          foundDate = new Date(file.lastModified);
+        }
+
+        const monthIndex = foundDate.getMonth();
+        const day = foundDate.getDate();
+
+        daysWithPhotos[monthIndex].add(day);
+      }
+
+      // Build missing list (month/day only)
+      const monthNames = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+      ];
+
+      let output = "Missing dates:\n\n";
+
+      for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+        const missingDays = [];
+
+        // Days 1–31 (browser auto-handles invalid dates)
+        for (let day = 1; day <= 31; day++) {
+          const testDate = new Date(2024, monthIndex, day);
+          if (testDate.getMonth() !== monthIndex) continue; // skip invalid days
+
+          if (!daysWithPhotos[monthIndex].has(day)) {
+            missingDays.push(formatCalendarDate(day, monthIndex));
+          }
+        }
+
+        if (missingDays.length > 0) {
+          output += `${monthNames[monthIndex]}\n`;
+          missingDays.forEach(line => output += `  ${line}\n`);
+          output += "\n";
+        }
+      }
+
+      document.getElementById("results").textContent = output.trim();
+    });
+  </script>
+
+</body>
+</html>
