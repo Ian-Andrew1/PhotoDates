@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.2.2)</title>
+  <title>PhotoDates (v.2.3)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
   <style>
     body {
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-  <h2>PhotoDates (v.2.2)</h2>
+  <h2>PhotoDates (v.2.3)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -27,19 +27,12 @@
   <div id="results"></div>
 
   <script>
-    // Format DD/MM (no weekday, no year)
-    function formatDayMonth(iso) {
-      const d = new Date(iso);
-      const dd = String(d.getDate()).padStart(2, "0");
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      return `${dd}/${mm}`;
-    }
-
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
       const files = [...event.target.files];
-      const photoDates = new Set();
 
-      // EXIF fields (from Version A — the one that worked)
+      // monthIndex → Set(days)
+      const daysWithPhotos = Array.from({ length: 12 }, () => new Set());
+
       const possibleDateTags = [
         "DateTimeOriginal",
         "CreateDate",
@@ -47,7 +40,6 @@
         "DateTimeDigitized"
       ];
 
-      // Read EXIF dates exactly as in Version A
       for (const file of files) {
         if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
 
@@ -69,33 +61,43 @@
 
         if (!foundDate) foundDate = new Date(file.lastModified);
 
-        const iso = foundDate.toISOString().split("T")[0];
-        photoDates.add(iso);
+        const monthIndex = foundDate.getMonth();
+        const day = foundDate.getDate();
+
+        daysWithPhotos[monthIndex].add(day);
       }
 
-      if (photoDates.size === 0) {
-        document.getElementById("results").textContent =
-          "No EXIF dates found in this folder.";
-        return;
+      const monthNames = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+      ];
+
+      let output = "Missing dates:\n\n";
+
+      for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+        const missing = [];
+
+        for (let day = 1; day <= 31; day++) {
+          const test = new Date(2024, monthIndex, day);
+          if (test.getMonth() !== monthIndex) continue;
+
+          if (!daysWithPhotos[monthIndex].has(day)) {
+            const dd = String(day).padStart(2, "0");
+            const mm = String(monthIndex + 1).padStart(2, "0");
+            missing.push(`${dd}/${mm}`);
+          }
+        }
+
+        if (missing.length > 0) {
+          output += `${monthNames[monthIndex]}\n`;
+          missing.forEach(line => output += `  ${line}\n`);
+          output += "\n";
+        }
       }
 
-      // Version A's missing-date logic (unchanged)
-      const sorted = [...photoDates].sort();
-      const start = new Date(sorted[0]);
-      const end = new Date(sorted[sorted.length - 1]);
+      document.getElementById("results").textContent = output.trim();
+    });
+  </script>
 
-      const missing = [];
-      let current = new Date(start);
-
-      while (current <= end) {
-        const iso = current.toISOString().split("T")[0];
-        if (!photoDates.has(iso)) missing.push(iso);
-        current.setDate(current.getDate() + 1);
-      }
-
-      // NEW: Group by month/day only (ignore year)
-      const grouped = {};
-
-      missing.forEach(iso => {
-        const d = new Date(iso);
-        const month
+</body>
+</html>
