@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.1.8)</title>
+  <title>PhotoDates (v.1.9)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
   <style>
     body {
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-  <h2>PhotoDates (v.1.8)</h2>
+  <h2>PhotoDates (v.1.9)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -27,12 +27,24 @@
   <div id="results"></div>
 
   <script>
-    // Format DD/MM (no weekday)
-    function formatDayMonth(day, monthIndex) {
-      const dd = String(day).padStart(2, "0");
-      const mm = String(monthIndex + 1).padStart(2, "0");
+    // Format DD/MM (no weekday, no year)
+    function formatDayMonth(iso) {
+      const d = new Date(iso);
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
       return `${dd}/${mm}`;
     }
 
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
-      const
+      const files = [...event.target.files];
+      const photoDates = new Set();
+
+      // EXIF fields (from Version A — the one that worked)
+      const possibleDateTags = [
+        "DateTimeOriginal",
+        "CreateDate",
+        "DateCreated",
+        "DateTimeDigitized"
+      ];
+
+      // Read EXIF dates exactly as in Version
