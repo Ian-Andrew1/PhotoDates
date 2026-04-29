@@ -27,10 +27,12 @@
   <div id="results"></div>
 
   <script>
-    function formatCalendarDate(iso) {
+    // NEW: Format DD/MM only (no weekday, no year)
+    function formatDayMonth(iso) {
       const d = new Date(iso);
-      const day = d.toLocaleDateString("en-GB", { weekday: "long" });
-      return `${iso} (${day})`;
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      return `${dd}/${mm}`;
     }
 
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
@@ -70,9 +72,9 @@
       const start = new Date(sorted[0]);
       const end = new Date(sorted[sorted.length - 1]);
 
-      const firstDate = sorted[0];
-      document.title = `PhotoDates (v.3) — from ${firstDate}`;
-      document.getElementById("title").textContent = `PhotoDates (v.3) — from ${firstDate}`;
+      // Title stays fixed (your request)
+      document.title = `PhotoDates (v.3)`;
+      document.getElementById("title").textContent = `PhotoDates (v.3)`;
 
       const missing = [];
       let current = new Date(start);
@@ -83,29 +85,27 @@
         current.setDate(current.getDate() + 1);
       }
 
+      // --- NEW GROUPING: month/day only, year ignored ---
       const grouped = {};
+
       missing.forEach(iso => {
         const d = new Date(iso);
-        const year = d.getFullYear();
-        const month = d.toLocaleString("en-GB", { month: "long" });
+        const monthName = d.toLocaleString("en-GB", { month: "long" });
+        const key = `${d.getMonth()}-${d.getDate()}`; // month-day pair
 
-        if (!grouped[year]) grouped[year] = {};
-        if (!grouped[year][month]) grouped[year][month] = [];
-
-        grouped[year][month].push(formatCalendarDate(iso));
+        if (!grouped[monthName]) grouped[monthName] = new Set();
+        grouped[monthName].add(formatDayMonth(iso));
       });
 
+      // Build output
       let output = "Missing dates:\n\n";
 
-      Object.keys(grouped).sort().forEach(year => {
-        output += `${year}\n`;
-        Object.keys(grouped[year]).forEach(month => {
-          output += `  ${month}\n`;
-          grouped[year][month].forEach(line => {
-            output += `    ${line}\n`;
-          });
-          output += "\n";
+      Object.keys(grouped).forEach(month => {
+        output += `${month}\n`;
+        [...grouped[month]].forEach(line => {
+          output += `  ${line}\n`;
         });
+        output += "\n";
       });
 
       document.getElementById("results").textContent = output.trim();
