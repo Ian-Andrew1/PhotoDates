@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>PhotoDates (v.2)</title>
-  <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exifreader/dist/exif-reader.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -44,8 +44,15 @@
           const arrayBuffer = await file.arrayBuffer();
           const tags = ExifReader.load(arrayBuffer);
 
-          if (tags.DateTimeOriginal) {
-            const dateStr = tags.DateTimeOriginal.description.split(" ")[0];
+          // FIX: handle multiple possible EXIF date fields
+          const tag =
+            tags.DateTimeOriginal ||
+            tags.DateCreated ||
+            tags.CreateDate ||
+            tags.DateTimeDigitized;
+
+          if (tag) {
+            const dateStr = tag.description.split(" ")[0];
             const [year, month, day] = dateStr.split(":");
             const date = new Date(`${year}-${month}-${day}`);
             photoDates.add(date.toISOString().split("T")[0]);
@@ -56,7 +63,8 @@
       }
 
       if (photoDates.size === 0) {
-        document.getElementById("results").textContent = "No EXIF dates found in this folder.";
+        document.getElementById("results").textContent =
+          "No EXIF dates found in this folder.";
         return;
       }
 
@@ -64,11 +72,13 @@
       const start = new Date(sorted[0]);
       const end = new Date(sorted[sorted.length - 1]);
 
-      // Update title with first date
+      // Update title
       const firstDate = sorted[0];
       document.title = `PhotoDates (v.2) — from ${firstDate}`;
-      document.getElementById("title").textContent = `PhotoDates (v.2) — from ${firstDate}`;
+      document.getElementById("title").textContent =
+        `PhotoDates (v.2) — from ${firstDate}`;
 
+      // Build missing date list
       const missing = [];
       let current = new Date(start);
 
@@ -78,7 +88,7 @@
         current.setDate(current.getDate() + 1);
       }
 
-      // Group missing dates by year → month
+      // Group by year → month
       const grouped = {};
       missing.forEach(iso => {
         const d = new Date(iso);
@@ -91,23 +101,3 @@
         grouped[year][month].push(formatCalendarDate(iso));
       });
 
-      // Build output text
-      let output = "Missing dates:\n\n";
-
-      Object.keys(grouped).sort().forEach(year => {
-        output += `${year}\n`;
-        Object.keys(grouped[year]).forEach(month => {
-          output += `  ${month}\n`;
-          grouped[year][month].forEach(line => {
-            output += `    ${line}\n`;
-          });
-          output += "\n";
-        });
-      });
-
-      document.getElementById("results").textContent = output.trim();
-    });
-  </script>
-
-</body>
-</html>
