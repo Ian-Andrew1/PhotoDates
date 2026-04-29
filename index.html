@@ -1,70 +1,74 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Calendar View</title>
-<style>
+  <meta charset="UTF-8">
+  <title>PhotoDates (v.2)</title>
+  <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
+  <style>
     body {
-        font-family: Arial, sans-serif;
-        background: #f8f8f8;
-        padding: 20px;
+      font-family: Arial, sans-serif;
+      margin: 40px;
     }
-
-    .calendar {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 6px;
-        max-width: 420px;
-        margin: 0 auto;
+    #results {
+      margin-top: 20px;
+      white-space: pre-line;
     }
-
-    .day-name {
-        font-weight: bold;
-        text-align: center;
-        padding: 6px 0;
-        background: #ddd;
-        border-radius: 4px;
-    }
-
-    .day {
-        text-align: center;
-        padding: 10px 0;
-        background: white;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-    }
-
-    .missing {
-        font-weight: bold;
-        color: red;
-    }
-</style>
+  </style>
 </head>
 <body>
 
-<h2 style="text-align:center;">April 2026</h2>
+  <h2>PhotoDates (v.2)</h2>
 
-<div id="calendar" class="calendar"></div>
+  <input type="file" id="folderPicker" webkitdirectory directory multiple>
+  <p>Select a folder containing your photos.</p>
 
-<script>
-// Example: dates you DO have (replace with Graph API results)
-const existingDates = [
-    "2026-04-01", "2026-04-02", "2026-04-05",
-    "2026-04-08", "2026-04-12", "2026-04-15",
-    "2026-04-18", "2026-04-22", "2026-04-27"
-];
+  <div id="results"></div>
 
-// Build calendar for a given month
-function buildCalendar(year, month) {
-    const calendar = document.getElementById("calendar");
-    calendar.innerHTML = "";
+  <script>
+    document.getElementById("folderPicker").addEventListener("change", async (event) => {
+      const files = [...event.target.files];
+      const photoDates = new Set();
 
-    const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    dayNames.forEach(d => {
-        const div = document.createElement("div");
-        div.className = "day-name";
-        div.textContent = d;
-        calendar.appendChild(div);
+      for (const file of files) {
+        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
+
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const tags = ExifReader.load(arrayBuffer);
+
+          if (tags.DateTimeOriginal) {
+            const dateStr = tags.DateTimeOriginal.description.split(" ")[0];
+            const [year, month, day] = dateStr.split(":");
+            const date = new Date(`${year}-${month}-${day}`);
+            photoDates.add(date.toISOString().split("T")[0]);
+          }
+        } catch (err) {
+          console.log("Error reading EXIF:", err);
+        }
+      }
+
+      if (photoDates.size === 0) {
+        document.getElementById("results").textContent = "No EXIF dates found in this folder.";
+        return;
+      }
+
+      const sorted = [...photoDates].sort();
+      const start = new Date(sorted[0]);
+      const end = new Date(sorted[sorted.length - 1]);
+
+      const missing = [];
+      let current = new Date(start);
+
+      while (current <= end) {
+        const iso = current.toISOString().split("T")[0];
+        if (!photoDates.has(iso)) missing.push(iso);
+        current.setDate(current.getDate() + 1);
+      }
+
+      document.getElementById("results").textContent =
+        "Missing dates:\n" + (missing.length ? missing.join("\n") : "None — you have photos for every date!");
     });
+  </script>
 
-    const firstDay = new Date(year
+</body>
+</html>
