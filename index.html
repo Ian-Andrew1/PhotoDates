@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.2.1)</title>
+  <title>PhotoDates (v.2.2)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
   <style>
     body {
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-  <h2>PhotoDates (v.2.1)</h2>
+  <h2>PhotoDates (v.2.2)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -93,31 +93,9 @@
         current.setDate(current.getDate() + 1);
       }
 
-      // NEW: Group by month only (ignore year)
+      // NEW: Group by month/day only (ignore year)
       const grouped = {};
 
       missing.forEach(iso => {
         const d = new Date(iso);
-        const month = d.toLocaleString("en-GB", { month: "long" });
-
-        if (!grouped[month]) grouped[month] = [];
-        grouped[month].push(formatDayMonth(iso));
-      });
-
-      // Build output
-      let output = "Missing dates:\n\n";
-
-      Object.keys(grouped).forEach(month => {
-        output += `${month}\n`;
-        grouped[month].forEach(line => {
-          output += `  ${line}\n`;
-        });
-        output += "\n";
-      });
-
-      document.getElementById("results").textContent = output.trim();
-    });
-  </script>
-
-</body>
-</html>
+        const month
