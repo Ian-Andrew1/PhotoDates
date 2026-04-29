@@ -27,7 +27,8 @@
   <div id="results"></div>
 
   <script>
-    // NEW: Format DD/MM only (no weekday, no year)
+
+    // NEW: Format DD/MM only
     function formatDayMonth(iso) {
       const d = new Date(iso);
       const dd = String(d.getDate()).padStart(2, "0");
@@ -72,7 +73,7 @@
       const start = new Date(sorted[0]);
       const end = new Date(sorted[sorted.length - 1]);
 
-      // Title stays fixed (your request)
+      // Title stays fixed
       document.title = `PhotoDates (v.3)`;
       document.getElementById("title").textContent = `PhotoDates (v.3)`;
 
@@ -85,7 +86,7 @@
         current.setDate(current.getDate() + 1);
       }
 
-      // --- NEW GROUPING: month/day only, year ignored ---
+      // --- NEW: Group by month only, ignore year completely ---
       const grouped = {};
 
       missing.forEach(iso => {
@@ -94,23 +95,8 @@
         const key = `${d.getMonth()}-${d.getDate()}`; // month-day pair
 
         if (!grouped[monthName]) grouped[monthName] = new Set();
-        grouped[monthName].add(formatDayMonth(iso));
+        grouped[monthName].add(formatDayMonth(iso)); // DD/MM only
       });
 
       // Build output
-      let output = "Missing dates:\n\n";
-
-      Object.keys(grouped).forEach(month => {
-        output += `${month}\n`;
-        [...grouped[month]].forEach(line => {
-          output += `  ${line}\n`;
-        });
-        output += "\n";
-      });
-
-      document.getElementById("results").textContent = output.trim();
-    });
-  </script>
-
-</body>
-</html>
+      let output = "Missing
