@@ -24,3 +24,90 @@
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
 
+  <div id="results"></div>
+
+  <script>
+    function formatCalendarDate(iso) {
+      const d = new Date(iso);
+      const day = d.toLocaleDateString("en-GB", { weekday: "long" });
+      return `${iso} (${day})`;
+    }
+
+    document.getElementById("folderPicker").addEventListener("change", async (event) => {
+      const files = [...event.target.files];
+      const photoDates = new Set();
+
+      for (const file of files) {
+        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
+
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const tags = ExifReader.load(arrayBuffer);
+
+          if (tags.DateTimeOriginal) {
+            const dateStr = tags.DateTimeOriginal.description.split(" ")[0];
+            const [year, month, day] = dateStr.split(":");
+            const date = new Date(`${year}-${month}-${day}`);
+            photoDates.add(date.toISOString().split("T")[0]);
+          }
+        } catch (err) {
+          console.log("Error reading EXIF:", err);
+        }
+      }
+
+      if (photoDates.size === 0) {
+        document.getElementById("results").textContent = "No EXIF dates found in this folder.";
+        return;
+      }
+
+      const sorted = [...photoDates].sort();
+      const start = new Date(sorted[0]);
+      const end = new Date(sorted[sorted.length - 1]);
+
+      // Update title with first date
+      const firstDate = sorted[0];
+      document.title = `PhotoDates (v.2) — from ${firstDate}`;
+      document.getElementById("title").textContent = `PhotoDates (v.2) — from ${firstDate}`;
+
+      const missing = [];
+      let current = new Date(start);
+
+      while (current <= end) {
+        const iso = current.toISOString().split("T")[0];
+        if (!photoDates.has(iso)) missing.push(iso);
+        current.setDate(current.getDate() + 1);
+      }
+
+      // Group missing dates by year → month
+      const grouped = {};
+      missing.forEach(iso => {
+        const d = new Date(iso);
+        const year = d.getFullYear();
+        const month = d.toLocaleString("en-GB", { month: "long" });
+
+        if (!grouped[year]) grouped[year] = {};
+        if (!grouped[year][month]) grouped[year][month] = [];
+
+        grouped[year][month].push(formatCalendarDate(iso));
+      });
+
+      // Build output text
+      let output = "Missing dates:\n\n";
+
+      Object.keys(grouped).sort().forEach(year => {
+        output += `${year}\n`;
+        Object.keys(grouped[year]).forEach(month => {
+          output += `  ${month}\n`;
+          grouped[year][month].forEach(line => {
+            output += `    ${line}\n`;
+          });
+          output += "\n";
+        });
+      });
+
+      document.getElementById("results").textContent = output.trim();
+    });
+  </script>
+
+</body>
+</html>
