@@ -1,52 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Calendar Test</title>
-
-<style>
+  <meta charset="UTF-8">
+  <title>PhotoDates (v.4)</title>
+  <script src="https://cdn.jsdelivr.net/npm/exifreader/dist/exif-reader.min.js"></script>
+  <style>
     body {
-        font-family: Arial, sans-serif;
-        background: #f8f8f8;
-        padding: 20px;
+      font-family: Arial, sans-serif;
+      margin: 40px;
     }
-
-    .calendar {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 6px;
-        max-width: 420px;
-        margin: 0 auto;
+    #results {
+      margin-top: 20px;
+      white-space: pre-line;
+      font-family: monospace;
+      font-size: 15px;
     }
-
-    .day-name {
-        font-weight: bold;
-        text-align: center;
-        padding: 6px 0;
-        background: #ddd;
-        border-radius: 4px;
-    }
-
-    .day {
-        text-align: center;
-        padding: 10px 0;
-        background: white;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-    }
-
-    .missing {
-        font-weight: bold;
-        color: red;
-    }
-</style>
+  </style>
 </head>
-
 <body>
 
-<h2 style="text-align:center;">April 2026</h2>
+  <h2 id="title">PhotoDates (v.4)</h2>
 
-<div id="calendar" class="calendar"></div>
+  <input type="file" id="folderPicker" webkitdirectory directory multiple>
+  <p>Select a folder containing your photos.</p>
 
-<script>
-// Wait for DOM
+  <div id="results"></div>
+
+  <script>
+    // Format date as DD/MM (Weekday)
+    function formatCalendarDate(iso) {
+      const d = new Date(iso);
+      const day = d.toLocaleDateString("en-GB", { weekday: "long" });
+
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+
+      return `${dd}/${mm} (${day})`;
+    }
+
+    document.getElementById("folderPicker").addEventListener("change", async (event) => {
+      const files = [...event.target.files];
+      const photoDates = new Set();
+
+      // Read EXIF dates
+      for (const file of files) {
+        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
+
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const tags = ExifReader.load(arrayBuffer);
+
+          const tag =
+            tags.DateTimeOriginal
