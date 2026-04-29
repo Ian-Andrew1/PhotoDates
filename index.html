@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.3)</title>
+  <title>PhotoDates (v.4)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader/dist/exif-reader.min.js"></script>
   <style>
     body {
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-  <h2 id="title">PhotoDates (v.3)</h2>
+  <h2 id="title">PhotoDates (v.4)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -39,4 +39,14 @@
     }
 
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
-      const files = [...event.target.files
+      const files = [...event.target.files];
+      const photoDates = new Set();
+
+      // Read EXIF dates
+      for (const file of files) {
+        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
+
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const tags = ExifReader.load(arrayBuffer);
+
