@@ -4,31 +4,80 @@
   <meta charset="UTF-8">
   <title>PhotoDates (v.3)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
+
   <style>
     body {
+      background: #f4f1e8; /* parchment */
       font-family: Arial, sans-serif;
-      margin: 40px;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 40px;
     }
+
+    h2 {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+
+    /* Retro button (same style family as CheekyCommentApp) */
+    #folderPickerLabel {
+      display: inline-block;
+      padding: 14px 28px;
+      background: radial-gradient(circle, #d4b48c 0%, #a67c52 70%);
+      border: 4px solid #3b2f2f;
+      border-radius: 10px;
+      box-shadow: 0 6px #3b2f2f, 0 10px 18px rgba(0,0,0,0.3);
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.1s ease-in-out;
+      text-align: center;
+      user-select: none;
+    }
+
+    #folderPickerLabel:active {
+      box-shadow: 0 3px #3b2f2f;
+      transform: translateY(3px);
+    }
+
+    /* Hide the actual input */
+    #folderPicker {
+      display: none;
+    }
+
+    /* Results box styled like CheekyComment output */
     #results {
-      margin-top: 20px;
-      white-space: pre-line;
-      font-family: monospace;
+      margin-top: 40px;
+      font-family: "Courier New", Courier, monospace;
       font-size: 15px;
+      background: #ffffffd0;
+      border: 1px solid #c8c2b8;
+      border-radius: 4px;
+      padding: 20px;
+      width: 320px;
+      min-height: 200px;
+      white-space: pre-line;
     }
   </style>
 </head>
+
 <body>
 
   <h2 id="title">PhotoDates (v.3)</h2>
 
+  <!-- Styled button that triggers the hidden folder picker -->
+  <label id="folderPickerLabel" for="folderPicker">SELECT PHOTO FOLDER</label>
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
-  <p>Select a folder containing your photos.</p>
 
-  <div id="results"></div>
+  <div id="results">Waiting for folder selection…</div>
 
   <script>
 
-    // NEW: Format DD/MM only
     function formatDayMonth(iso) {
       const d = new Date(iso);
       const dd = String(d.getDate()).padStart(2, "0");
@@ -65,7 +114,8 @@
       }
 
       if (photoDates.size === 0) {
-        document.getElementById("results").textContent = "No EXIF dates found in this folder.";
+        document.getElementById("results").textContent =
+          "No EXIF dates found in this folder.";
         return;
       }
 
@@ -73,7 +123,6 @@
       const start = new Date(sorted[0]);
       const end = new Date(sorted[sorted.length - 1]);
 
-      // Title stays fixed
       document.title = `PhotoDates (v.3)`;
       document.getElementById("title").textContent = `PhotoDates (v.3)`;
 
@@ -86,17 +135,7 @@
         current.setDate(current.getDate() + 1);
       }
 
-      // --- NEW: Group by month only, ignore year completely ---
       const grouped = {};
 
       missing.forEach(iso => {
         const d = new Date(iso);
-        const monthName = d.toLocaleString("en-GB", { month: "long" });
-        const key = `${d.getMonth()}-${d.getDate()}`; // month-day pair
-
-        if (!grouped[monthName]) grouped[monthName] = new Set();
-        grouped[monthName].add(formatDayMonth(iso)); // DD/MM only
-      });
-
-      // Build output
-      let output = "Missing
