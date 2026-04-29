@@ -38,38 +38,64 @@
       return `${dd}/${mm} (${day})`;
     }
 
+    // Try many EXIF fields
+    const possibleDateTags = [
+      "DateTimeOriginal",
+      "CreateDate",
+      "DateCreated",
+      "DateTimeDigitized",
+      "ModifyDate",
+      "DateTime",
+      "MediaCreateDate",
+      "MediaModifyDate",
+      "TrackCreateDate",
+      "TrackModifyDate",
+      "ContentCreateDate",
+      "GPSDateStamp"
+    ];
+
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
       const files = [...event.target.files];
       const photoDates = new Set();
 
-      // Read EXIF dates
       for (const file of files) {
         if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
+
+        let foundDate = null;
 
         try {
           const arrayBuffer = await file.arrayBuffer();
           const tags = ExifReader.load(arrayBuffer);
 
-          const tag =
-            tags.DateTimeOriginal ||
-            tags.DateCreated ||
-            tags.CreateDate ||
-            tags.DateTimeDigitized;
+          // Try all possible EXIF date fields
+          for (const tagName of possibleDateTags) {
+            if (tags[tagName]) {
+              const raw = tags[tagName].description.split(" ")[0];
+              const parts = raw.split(/[:\/]/);
 
-          if (tag) {
-            const dateStr = tag.description.split(" ")[0];
-            const [year, month, day] = dateStr.split(":");
-            const date = new Date(`${year}-${month}-${day}`);
-            photoDates.add(date.toISOString().split("T")[0]);
+              if (parts.length >= 3) {
+                const [y, m, d] = parts;
+                foundDate = new Date(`${y}-${m}-${d}`);
+                break;
+              }
+            }
           }
         } catch (err) {
-          console.log("Error reading EXIF:", err);
+          console.log("EXIF error:", err);
         }
+
+        // Fallback: use file modified date if EXIF missing
+        if (!foundDate) {
+          foundDate = new Date(file.lastModified);
+        }
+
+        const iso = foundDate.toISOString().split("T")[0];
+        photoDates.add(iso);
       }
 
       if (photoDates.size === 0) {
         document.getElementById("results").textContent =
-          "No EXIF dates found in this folder.";
+          "No usable dates found in this folder.";
         return;
       }
 
@@ -91,7 +117,7 @@
         current.setDate(current.getDate() + 1);
       }
 
-      // Group by month only (stable)
+      // Group by month only
       const grouped = {};
       missing.forEach(iso => {
         const d = new Date(iso);
@@ -101,7 +127,7 @@
         grouped[month].push(formatCalendarDate(iso));
       });
 
-      // Build output safely
+      // Build output
       let output = "Missing dates:\n\n";
 
       const monthOrder = [
