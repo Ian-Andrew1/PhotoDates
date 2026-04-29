@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.1.6)</title>
+  <title>PhotoDates (v.1.7)</title>
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.12.0/dist/exif-reader.min.js"></script>
 
   <style>
@@ -48,7 +48,7 @@
 </head>
 <body>
 
-  <h2>PhotoDates (v.1.6)</h2>
+  <h2>PhotoDates (v.1.7)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -62,79 +62,4 @@
       // Track which days have photos (monthIndex → Set(days))
       const daysWithPhotos = Array.from({ length: 12 }, () => new Set());
 
-      // EXIF fields to check
-      const possibleDateTags = [
-        "DateTimeOriginal",
-        "CreateDate",
-        "DateCreated",
-        "DateTimeDigitized"
-      ];
-
-      for (const file of files) {
-        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
-
-        let foundDate = null;
-
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const tags = ExifReader.load(arrayBuffer);
-
-          for (const tagName of possibleDateTags) {
-            if (tags[tagName]) {
-              const raw = tags[tagName].description.split(" ")[0];
-              const [y, m, d] = raw.split(":");
-              foundDate = new Date(`${y}-${m}-${d}`);
-              break;
-            }
-          }
-        } catch {}
-
-        // Fallback: file modified date
-        if (!foundDate) foundDate = new Date(file.lastModified);
-
-        const monthIndex = foundDate.getMonth();
-        const day = foundDate.getDate();
-
-        daysWithPhotos[monthIndex].add(day);
-      }
-
-      const monthNames = [
-        "January","February","March","April","May","June",
-        "July","August","September","October","November","December"
-      ];
-
-      let html = "";
-
-      for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
-        html += `<div class="month">`;
-        html += `<div class="month-name">${monthNames[monthIndex]}</div>`;
-        html += `<div class="calendar">`;
-
-        // Determine the weekday the month starts on (using 2024 as a template)
-        const fakeYear = 2024;
-        const firstDay = new Date(fakeYear, monthIndex, 1).getDay(); // 0=Sun
-
-        // Add empty cells before the 1st
-        for (let i = 0; i < firstDay; i++) {
-          html += `<div class="day empty"></div>`;
-        }
-
-        // Fill in the days
-        for (let day = 1; day <= 31; day++) {
-          const test = new Date(fakeYear, monthIndex, day);
-          if (test.getMonth() !== monthIndex) break;
-
-          const hasPhoto = daysWithPhotos[monthIndex].has(day);
-
-          html += `<div class="day ${hasPhoto ? "" : "missing"}">${day}</div>`;
-        }
-
-        html += `</div></div>`;
-      }
-
-      document.getElementById("results").innerHTML = html;
-    });
-  </script>
-
-</body>
-</html>
+      // EXIF fields to check (same as your working
