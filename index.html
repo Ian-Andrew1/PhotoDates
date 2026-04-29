@@ -2,8 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PhotoDates (v.4)</title>
-  <script src="https://cdn.jsdelivr.net/npm/exifreader/dist/exif-reader.min.js"></script>
+  <title>PhotoDates (v.1.5)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -19,7 +18,7 @@
 </head>
 <body>
 
-  <h2 id="title">PhotoDates (v.4)</h2>
+  <h2 id="title">PhotoDates (v.1.5)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -29,7 +28,7 @@
   <script>
     // Format date as DD/MM (Weekday)
     function formatCalendarDate(day, monthIndex) {
-      const fakeYear = 2024; // leap year to allow 29 Feb
+      const fakeYear = 2024; // leap year for Feb 29
       const d = new Date(fakeYear, monthIndex, day);
       const weekday = d.toLocaleDateString("en-GB", { weekday: "long" });
 
@@ -39,95 +38,11 @@
       return `${dd}/${mm} (${weekday})`;
     }
 
-    // EXIF date fields to check
-    const possibleDateTags = [
-      "DateTimeOriginal",
-      "CreateDate",
-      "DateCreated",
-      "DateTimeDigitized",
-      "ModifyDate",
-      "DateTime",
-      "MediaCreateDate",
-      "MediaModifyDate",
-      "TrackCreateDate",
-      "TrackModifyDate",
-      "ContentCreateDate",
-      "GPSDateStamp"
-    ];
-
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
       const files = [...event.target.files];
 
-      // Store days that HAVE photos: monthIndex → Set(days)
+      // Track which days have photos (monthIndex → Set(days))
       const daysWithPhotos = Array.from({ length: 12 }, () => new Set());
 
       for (const file of files) {
-        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
-
-        let foundDate = null;
-
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const tags = ExifReader.load(arrayBuffer);
-
-          for (const tagName of possibleDateTags) {
-            if (tags[tagName]) {
-              const raw = tags[tagName].description.split(" ")[0];
-              const parts = raw.split(/[:\/]/);
-
-              if (parts.length >= 3) {
-                const [y, m, d] = parts;
-                foundDate = new Date(`${y}-${m}-${d}`);
-                break;
-              }
-            }
-          }
-        } catch (err) {
-          console.log("EXIF error:", err);
-        }
-
-        // Fallback: file modified date
-        if (!foundDate) {
-          foundDate = new Date(file.lastModified);
-        }
-
-        const monthIndex = foundDate.getMonth();
-        const day = foundDate.getDate();
-
-        daysWithPhotos[monthIndex].add(day);
-      }
-
-      // Build missing list (month/day only)
-      const monthNames = [
-        "January","February","March","April","May","June",
-        "July","August","September","October","November","December"
-      ];
-
-      let output = "Missing dates:\n\n";
-
-      for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
-        const missingDays = [];
-
-        // Days 1–31 (browser auto-handles invalid dates)
-        for (let day = 1; day <= 31; day++) {
-          const testDate = new Date(2024, monthIndex, day);
-          if (testDate.getMonth() !== monthIndex) continue; // skip invalid days
-
-          if (!daysWithPhotos[monthIndex].has(day)) {
-            missingDays.push(formatCalendarDate(day, monthIndex));
-          }
-        }
-
-        if (missingDays.length > 0) {
-          output += `${monthNames[monthIndex]}\n`;
-          missingDays.forEach(line => output += `  ${line}\n`);
-          output += "\n";
-        }
-      }
-
-      document.getElementById("results").textContent = output.trim();
-    });
-  </script>
-
-</body>
-</html>
+        if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue
