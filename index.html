@@ -19,7 +19,7 @@
 </head>
 <body>
 
-  <h2 id="title">PhotoDates (v.3)</h2>
+  <h2 id="title">PhotoDates (v.5)</h2>
 
   <input type="file" id="folderPicker" webkitdirectory directory multiple>
   <p>Select a folder containing your photos.</p>
@@ -28,17 +28,18 @@
 
   <script>
 
-    // NEW: Format DD/MM only
-    function formatDayMonth(iso) {
-      const d = new Date(iso);
-      const dd = String(d.getDate()).padStart(2, "0");
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
+    // Format DD/MM only
+    function formatDayMonth(day, monthIndex) {
+      const dd = String(day).padStart(2, "0");
+      const mm = String(monthIndex + 1).padStart(2, "0");
       return `${dd}/${mm}`;
     }
 
     document.getElementById("folderPicker").addEventListener("change", async (event) => {
       const files = [...event.target.files];
-      const photoDates = new Set();
+
+      // monthIndex -> Set of days that have at least one photo (ignoring year)
+      const daysWithPhotos = Array.from({ length: 12 }, () => new Set());
 
       for (const file of files) {
         if (!file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) continue;
@@ -57,57 +58,59 @@
             const dateStr = tag.description.split(" ")[0];
             const [year, month, day] = dateStr.split(":");
             const date = new Date(`${year}-${month}-${day}`);
-            photoDates.add(date.toISOString().split("T")[0]);
+            const m = date.getMonth();
+            const d = date.getDate();
+            daysWithPhotos[m].add(d);
+            continue;
           }
         } catch (err) {
           console.log("Error reading EXIF:", err);
         }
+
+        // Fallback to file modified date if EXIF not present
+        try {
+          const fallback = new Date(file.lastModified);
+          if (!isNaN(fallback)) {
+            const m = fallback.getMonth();
+            const d = fallback.getDate();
+            daysWithPhotos[m].add(d);
+          }
+        } catch (e) {}
       }
 
-      if (photoDates.size === 0) {
-        document.getElementById("results").textContent = "No EXIF dates found in this folder.";
+      // If no photos at all
+      const anyPhotos = daysWithPhotos.some(s => s.size > 0);
+      if (!anyPhotos) {
+        document.getElementById("results").textContent = "No photo dates found in this folder.";
         return;
       }
 
-      const sorted = [...photoDates].sort();
-      const start = new Date(sorted[0]);
-      const end = new Date(sorted[sorted.length - 1]);
+      const monthNames = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+      ];
 
-      // Title stays fixed
-      document.title = `PhotoDates (v.3)`;
-      document.getElementById("title").textContent = `PhotoDates (v.3)`;
+      // Build output: for each month, list days that do NOT appear in daysWithPhotos[month]
+      let output = "Missing dates (day/month only):\n\n";
 
-      const missing = [];
-      let current = new Date(start);
+      for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+        const missing = [];
 
-      while (current <= end) {
-        const iso = current.toISOString().split("T")[0];
-        if (!photoDates.has(iso)) missing.push(iso);
-        current.setDate(current.getDate() + 1);
+        // Determine number of days in this month using a non-leap template year (2024 is leap; use 2021 to be safe)
+        const daysInMonth = new Date(2021, monthIndex + 1, 0).getDate();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          if (!daysWithPhotos[monthIndex].has(day)) {
+            missing.push(formatDayMonth(day, monthIndex));
+          }
+        }
+
+        if (missing.length > 0) {
+          output += `${monthNames[monthIndex]}\n`;
+          missing.forEach(line => output += `  ${line}\n`);
+          output += "\n";
+        }
       }
-
-      // --- NEW: Group by month only, ignore year completely ---
-      const grouped = {};
-
-      missing.forEach(iso => {
-        const d = new Date(iso);
-        const monthName = d.toLocaleString("en-GB", { month: "long" });
-        const key = `${d.getMonth()}-${d.getDate()}`; // month-day pair
-
-        if (!grouped[monthName]) grouped[monthName] = new Set();
-        grouped[monthName].add(formatDayMonth(iso)); // DD/MM only
-      });
-
-      // Build output
-      let output = "Missing dates:\n\n";
-
-      Object.keys(grouped).forEach(month => {
-        output += `${month}\n`;
-        [...grouped[month]].forEach(line => {
-          output += `  ${line}\n`;
-        });
-        output += "\n";
-      });
 
       document.getElementById("results").textContent = output.trim();
     });
